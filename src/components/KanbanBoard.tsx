@@ -17,8 +17,10 @@ import { AddTaskModal } from './AddTaskModal';
 import { EditTaskModal } from './EditTaskModal';
 import { FilterBar } from './FilterBar';
 import { Button } from '@/components/ui/button';
-import { Plus } from 'lucide-react';
+import { Switch } from '@/components/ui/switch';
+import { Plus, Moon, Sun } from 'lucide-react';
 import { toast } from 'sonner';
+import { useTheme } from '@/hooks/useTheme';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -33,6 +35,7 @@ import {
 const STORAGE_KEY = 'kanban-tasks';
 
 export function KanbanBoard() {
+  const { theme, toggleTheme } = useTheme();
   const [tasks, setTasks] = useState<Task[]>([]);
   const [activeId, setActiveId] = useState<string | null>(null);
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
@@ -255,10 +258,21 @@ export function KanbanBoard() {
             <h1 className="text-3xl font-bold text-foreground">Task Manager</h1>
             <p className="text-muted-foreground mt-1">Organize your tasks with drag and drop</p>
           </div>
-          <Button onClick={() => setIsAddModalOpen(true)} className="bg-gradient-primary">
-            <Plus className="h-4 w-4 mr-2" />
-            Add Task
-          </Button>
+          <div className="flex items-center gap-3">
+            <div className="flex items-center gap-2 px-3 py-2 bg-card rounded-lg border shadow-sm">
+              <Sun className="h-4 w-4 text-muted-foreground" />
+              <Switch
+                checked={theme === 'dark'}
+                onCheckedChange={toggleTheme}
+                aria-label="Toggle theme"
+              />
+              <Moon className="h-4 w-4 text-muted-foreground" />
+            </div>
+            <Button onClick={() => setIsAddModalOpen(true)} className="bg-gradient-primary">
+              <Plus className="h-4 w-4 mr-2" />
+              Add Task
+            </Button>
+          </div>
         </div>
 
         <FilterBar
