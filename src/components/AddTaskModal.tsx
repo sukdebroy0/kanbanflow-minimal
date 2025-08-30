@@ -4,10 +4,11 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
-import { Sparkles, Key, Loader2 } from 'lucide-react';
-import { generateTaskFromPrompt, setOpenAIKey } from '@/utils/aiTaskGenerator';
+import { Sparkles, Key, Loader2, Shield, AlertCircle, Eye, EyeOff } from 'lucide-react';
+import { generateTaskFromPrompt } from '@/utils/aiTaskGenerator';
 import { toast } from 'sonner';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Alert, AlertDescription } from '@/components/ui/alert';
 
 interface AddTaskModalProps {
   isOpen: boolean;
@@ -19,15 +20,19 @@ export function AddTaskModal({ isOpen, onClose, onAdd }: AddTaskModalProps) {
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
   const [aiPrompt, setAiPrompt] = useState('');
-  const [apiKey, setApiKey] = useState(localStorage.getItem('openai_api_key') || '');
+  const [apiKey, setApiKey] = useState(''); // Secure: Only stored in memory
   const [isGenerating, setIsGenerating] = useState(false);
   const [generatedTasks, setGeneratedTasks] = useState<Array<{title: string, description: string}>>([]);
-  const [showApiKeyInput, setShowApiKeyInput] = useState(!apiKey);
+  const [showApiKeyInput, setShowApiKeyInput] = useState(true);
+  const [showApiKey, setShowApiKey] = useState(false);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (title.trim()) {
-      onAdd(title.trim(), description.trim());
+    const trimmedTitle = title.trim().slice(0, 100); // Enforce max length
+    const trimmedDescription = description.trim().slice(0, 500); // Enforce max length
+    
+    if (trimmedTitle) {
+      onAdd(trimmedTitle, trimmedDescription);
       setTitle('');
       setDescription('');
       onClose();
@@ -48,7 +53,7 @@ export function AddTaskModal({ isOpen, onClose, onAdd }: AddTaskModalProps) {
 
     setIsGenerating(true);
     try {
-      const tasks = await generateTaskFromPrompt(aiPrompt);
+      const tasks = await generateTaskFromPrompt(aiPrompt, apiKey);
       setGeneratedTasks(tasks);
       
       if (tasks.length === 1) {
@@ -66,9 +71,9 @@ export function AddTaskModal({ isOpen, onClose, onAdd }: AddTaskModalProps) {
 
   const handleSaveApiKey = () => {
     if (apiKey.trim()) {
-      setOpenAIKey(apiKey.trim());
+      // API key is now only stored in component state (memory)
       setShowApiKeyInput(false);
-      toast.success('API key saved successfully');
+      toast.success('API key saved for this session only (secure mode)');
     }
   };
 
@@ -100,26 +105,49 @@ export function AddTaskModal({ isOpen, onClose, onAdd }: AddTaskModalProps) {
           <DialogTitle>Add New Task</DialogTitle>
         </DialogHeader>
         
-        {showApiKeyInput ? (
+        {showApiKeyInput && !apiKey ? (
           <div className="space-y-4">
+            <Alert className="border-yellow-200 bg-yellow-50 dark:border-yellow-900 dark:bg-yellow-950">
+              <Shield className="h-4 w-4 text-yellow-600 dark:text-yellow-400" />
+              <AlertDescription className="text-yellow-800 dark:text-yellow-200">
+                <strong>Security Notice:</strong> Your API key is only stored in memory during this session. It will be cleared when you close the app or refresh the page.
+              </AlertDescription>
+            </Alert>
+            
             <div className="rounded-lg bg-muted/50 p-4 space-y-3">
               <div className="flex items-center gap-2 text-sm text-muted-foreground">
                 <Key className="h-4 w-4" />
-                <span>OpenAI API key required for AI features</span>
+                <span>Enter your OpenAI API key for AI features</span>
               </div>
-              <Input
-                type="password"
-                value={apiKey}
-                onChange={(e) => setApiKey(e.target.value)}
-                placeholder="sk-..."
-                className="font-mono text-sm"
-              />
+              <div className="relative">
+                <Input
+                  type={showApiKey ? "text" : "password"}
+                  value={apiKey}
+                  onChange={(e) => setApiKey(e.target.value)}
+                  placeholder="sk-..."
+                  className="font-mono text-sm pr-10"
+                  maxLength={200}
+                />
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="sm"
+                  className="absolute right-0 top-0 h-full px-3 py-2 hover:bg-transparent"
+                  onClick={() => setShowApiKey(!showApiKey)}
+                >
+                  {showApiKey ? (
+                    <EyeOff className="h-4 w-4 text-muted-foreground" />
+                  ) : (
+                    <Eye className="h-4 w-4 text-muted-foreground" />
+                  )}
+                </Button>
+              </div>
               <div className="flex gap-2">
                 <Button onClick={handleSaveApiKey} disabled={!apiKey.trim()}>
-                  Save API Key
+                  Use API Key
                 </Button>
                 <Button variant="outline" onClick={() => setShowApiKeyInput(false)}>
-                  Skip
+                  Skip AI Features
                 </Button>
               </div>
             </div>
@@ -137,24 +165,26 @@ export function AddTaskModal({ isOpen, onClose, onAdd }: AddTaskModalProps) {
             <TabsContent value="manual" className="space-y-4">
               <form onSubmit={handleSubmit} className="space-y-4">
                 <div className="space-y-2">
-                  <Label htmlFor="title">Title</Label>
+                  <Label htmlFor="title">Title (max 100 characters)</Label>
                   <Input
                     id="title"
                     value={title}
-                    onChange={(e) => setTitle(e.target.value)}
+                    onChange={(e) => setTitle(e.target.value.slice(0, 100))}
                     placeholder="Enter task title..."
                     className="w-full"
+                    maxLength={100}
                     autoFocus
                   />
                 </div>
                 <div className="space-y-2">
-                  <Label htmlFor="description">Description</Label>
+                  <Label htmlFor="description">Description (max 500 characters)</Label>
                   <Textarea
                     id="description"
                     value={description}
-                    onChange={(e) => setDescription(e.target.value)}
+                    onChange={(e) => setDescription(e.target.value.slice(0, 500))}
                     placeholder="Enter task description..."
                     className="w-full min-h-[100px]"
+                    maxLength={500}
                   />
                 </div>
                 <DialogFooter>
@@ -172,21 +202,31 @@ export function AddTaskModal({ isOpen, onClose, onAdd }: AddTaskModalProps) {
             </TabsContent>
             
             <TabsContent value="ai" className="space-y-4">
+              {!apiKey && (
+                <Alert className="border-amber-200 bg-amber-50 dark:border-amber-900 dark:bg-amber-950">
+                  <AlertCircle className="h-4 w-4 text-amber-600 dark:text-amber-400" />
+                  <AlertDescription className="text-amber-800 dark:text-amber-200">
+                    Please enter your OpenAI API key above to use AI features
+                  </AlertDescription>
+                </Alert>
+              )}
               <div className="space-y-4">
                 <div className="space-y-2">
-                  <Label htmlFor="ai-prompt">Describe your task(s)</Label>
+                  <Label htmlFor="ai-prompt">Describe your task(s) (max 1000 characters)</Label>
                   <Textarea
                     id="ai-prompt"
                     value={aiPrompt}
-                    onChange={(e) => setAiPrompt(e.target.value)}
+                    onChange={(e) => setAiPrompt(e.target.value.slice(0, 1000))}
                     placeholder="e.g., 'Create a marketing campaign for Q2 with social media posts and email newsletters' or 'Fix bugs in the authentication system'"
                     className="w-full min-h-[100px]"
+                    maxLength={1000}
+                    disabled={!apiKey}
                   />
                 </div>
                 
                 <Button 
                   onClick={handleAIGenerate} 
-                  disabled={isGenerating || !aiPrompt.trim()}
+                  disabled={isGenerating || !aiPrompt.trim() || !apiKey}
                   className="w-full bg-gradient-primary"
                 >
                   {isGenerating ? (
@@ -227,15 +267,31 @@ export function AddTaskModal({ isOpen, onClose, onAdd }: AddTaskModalProps) {
                   </div>
                 )}
 
-                <div className="flex gap-2">
-                  <Button 
-                    variant="outline" 
-                    onClick={() => setShowApiKeyInput(true)}
-                    className="gap-2"
-                  >
-                    <Key className="h-4 w-4" />
-                    Change API Key
-                  </Button>
+                <div className="flex gap-2 flex-wrap">
+                  {apiKey && (
+                    <Button 
+                      variant="outline" 
+                      onClick={() => {
+                        setApiKey('');
+                        setShowApiKeyInput(true);
+                        toast.info('API key cleared from memory');
+                      }}
+                      className="gap-2"
+                    >
+                      <Key className="h-4 w-4" />
+                      Clear API Key
+                    </Button>
+                  )}
+                  {!apiKey && (
+                    <Button 
+                      variant="outline" 
+                      onClick={() => setShowApiKeyInput(true)}
+                      className="gap-2"
+                    >
+                      <Key className="h-4 w-4" />
+                      Add API Key
+                    </Button>
+                  )}
                   <Button variant="outline" onClick={() => {
                     handleReset();
                     onClose();

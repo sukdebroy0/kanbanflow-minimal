@@ -3,11 +3,23 @@ export interface GeneratedTask {
   description: string;
 }
 
-const OPENAI_API_KEY = localStorage.getItem('openai_api_key') || '';
+// Maximum lengths for security
+const MAX_TITLE_LENGTH = 100;
+const MAX_DESCRIPTION_LENGTH = 500;
+const MAX_PROMPT_LENGTH = 1000;
 
-export async function generateTaskFromPrompt(prompt: string): Promise<GeneratedTask[]> {
-  if (!OPENAI_API_KEY) {
-    throw new Error('Please set your OpenAI API key first');
+export async function generateTaskFromPrompt(prompt: string, apiKey: string): Promise<GeneratedTask[]> {
+  // Validate inputs
+  if (!apiKey) {
+    throw new Error('Please provide your OpenAI API key');
+  }
+  
+  if (!prompt || prompt.trim().length === 0) {
+    throw new Error('Please provide a task description');
+  }
+  
+  if (prompt.length > MAX_PROMPT_LENGTH) {
+    throw new Error(`Prompt is too long. Maximum ${MAX_PROMPT_LENGTH} characters allowed`);
   }
 
   try {
@@ -15,7 +27,7 @@ export async function generateTaskFromPrompt(prompt: string): Promise<GeneratedT
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        'Authorization': `Bearer ${OPENAI_API_KEY}`
+        'Authorization': `Bearer ${apiKey}`
       },
       body: JSON.stringify({
         model: 'gpt-4.1-mini-2025-04-14',
@@ -51,24 +63,24 @@ export async function generateTaskFromPrompt(prompt: string): Promise<GeneratedT
       const tasks = JSON.parse(content);
       if (!Array.isArray(tasks)) {
         return [{
-          title: tasks.title || 'New Task',
-          description: tasks.description || ''
+          title: (tasks.title || 'New Task').slice(0, MAX_TITLE_LENGTH),
+          description: (tasks.description || '').slice(0, MAX_DESCRIPTION_LENGTH)
         }];
       }
-      return tasks;
+      // Validate and sanitize each task
+      return tasks.map(task => ({
+        title: String(task.title || 'New Task').slice(0, MAX_TITLE_LENGTH),
+        description: String(task.description || '').slice(0, MAX_DESCRIPTION_LENGTH)
+      }));
     } catch {
       // Fallback if response isn't valid JSON
       return [{
-        title: prompt.slice(0, 50),
-        description: content || prompt
+        title: prompt.slice(0, MAX_TITLE_LENGTH),
+        description: (content || prompt).slice(0, MAX_DESCRIPTION_LENGTH)
       }];
     }
   } catch (error) {
     console.error('AI task generation error:', error);
     throw error;
   }
-}
-
-export function setOpenAIKey(key: string) {
-  localStorage.setItem('openai_api_key', key);
 }

@@ -229,19 +229,38 @@ export function KanbanBoard() {
       try {
         const imported = JSON.parse(e.target?.result as string);
         if (Array.isArray(imported)) {
-          const validTasks = imported.map((task: any) => ({
-            ...task,
-            id: task.id || Date.now().toString() + Math.random(),
-            createdAt: new Date(task.createdAt || Date.now()),
-            updatedAt: new Date(task.updatedAt || Date.now()),
-          }));
+          // Validate and sanitize each task
+          const validTasks = imported
+            .filter((task: any) => 
+              typeof task === 'object' && 
+              task !== null &&
+              typeof task.title === 'string' &&
+              task.title.trim().length > 0
+            )
+            .map((task: any) => ({
+              id: String(task.id || Date.now().toString() + Math.random()),
+              title: String(task.title).slice(0, 100).trim(), // Enforce max length
+              description: String(task.description || '').slice(0, 500).trim(), // Enforce max length
+              status: ['todo', 'in-progress', 'done'].includes(task.status) 
+                ? task.status 
+                : 'todo', // Validate status
+              createdAt: new Date(task.createdAt || Date.now()),
+              updatedAt: new Date(task.updatedAt || Date.now()),
+            }));
+          
+          if (validTasks.length === 0) {
+            toast.error('No valid tasks found in file');
+            return;
+          }
+          
           setTasks(validTasks);
           toast.success(`Imported ${validTasks.length} tasks successfully`);
         } else {
-          toast.error('Invalid file format');
+          toast.error('Invalid file format - expected an array of tasks');
         }
       } catch (error) {
-        toast.error('Failed to import tasks');
+        console.error('Import error:', error);
+        toast.error('Failed to import tasks - invalid JSON format');
       }
     };
     reader.readAsText(file);
