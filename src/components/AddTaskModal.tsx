@@ -1,14 +1,16 @@
-import { useState } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
-import { Sparkles, Key, Loader2, Shield, AlertCircle, Eye, EyeOff } from 'lucide-react';
+import { Sparkles, Key, Loader2, Shield, AlertCircle, Eye, EyeOff, Lightbulb } from 'lucide-react';
 import { generateTaskFromPrompt } from '@/utils/aiTaskGenerator';
+import { getAISuggestions, getLocalSuggestions, type TaskSuggestion } from '@/utils/aiSuggestions';
 import { toast } from 'sonner';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Alert, AlertDescription } from '@/components/ui/alert';
+import { cn } from '@/lib/utils';
 
 interface AddTaskModalProps {
   isOpen: boolean;
@@ -25,6 +27,12 @@ export function AddTaskModal({ isOpen, onClose, onAdd }: AddTaskModalProps) {
   const [generatedTasks, setGeneratedTasks] = useState<Array<{title: string, description: string}>>([]);
   const [showApiKeyInput, setShowApiKeyInput] = useState(true);
   const [showApiKey, setShowApiKey] = useState(false);
+  const [suggestions, setSuggestions] = useState<TaskSuggestion[]>([]);
+  const [showSuggestions, setShowSuggestions] = useState(false);
+  const [selectedSuggestion, setSelectedSuggestion] = useState<number>(-1);
+  const [isLoadingSuggestions, setIsLoadingSuggestions] = useState(false);
+  const suggestionsTimeoutRef = useRef<NodeJS.Timeout>();
+  const titleInputRef = useRef<HTMLInputElement>(null);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -91,7 +99,100 @@ export function AddTaskModal({ isOpen, onClose, onAdd }: AddTaskModalProps) {
     setDescription('');
     setAiPrompt('');
     setGeneratedTasks([]);
+    setSuggestions([]);
+    setShowSuggestions(false);
+    setSelectedSuggestion(-1);
   };
+
+  // Handle title input changes and fetch suggestions
+  const handleTitleChange = (value: string) => {
+    setTitle(value.slice(0, 100));
+    setSelectedSuggestion(-1);
+    
+    // Clear previous timeout
+    if (suggestionsTimeoutRef.current) {
+      clearTimeout(suggestionsTimeoutRef.current);
+    }
+    
+    // Don't show suggestions for very short input
+    if (value.length < 2) {
+      setShowSuggestions(false);
+      setSuggestions([]);
+      return;
+    }
+    
+    // Debounce the suggestions
+    suggestionsTimeoutRef.current = setTimeout(async () => {
+      setIsLoadingSuggestions(true);
+      try {
+        let newSuggestions: TaskSuggestion[];
+        
+        if (apiKey) {
+          // Use AI suggestions if API key is available
+          newSuggestions = await getAISuggestions(value, apiKey);
+        } else {
+          // Use local suggestions
+          newSuggestions = getLocalSuggestions(value);
+        }
+        
+        setSuggestions(newSuggestions);
+        setShowSuggestions(newSuggestions.length > 0);
+      } catch (error) {
+        console.error('Error fetching suggestions:', error);
+        // Fallback to local suggestions
+        const localSuggestions = getLocalSuggestions(value);
+        setSuggestions(localSuggestions);
+        setShowSuggestions(localSuggestions.length > 0);
+      } finally {
+        setIsLoadingSuggestions(false);
+      }
+    }, 300); // 300ms debounce
+  };
+
+  // Handle suggestion selection
+  const selectSuggestion = (suggestion: TaskSuggestion) => {
+    setTitle(suggestion.title);
+    setDescription(suggestion.description);
+    setShowSuggestions(false);
+    setSuggestions([]);
+  };
+
+  // Handle keyboard navigation in suggestions
+  const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (!showSuggestions || suggestions.length === 0) return;
+    
+    if (e.key === 'ArrowDown') {
+      e.preventDefault();
+      setSelectedSuggestion(prev => 
+        prev < suggestions.length - 1 ? prev + 1 : 0
+      );
+    } else if (e.key === 'ArrowUp') {
+      e.preventDefault();
+      setSelectedSuggestion(prev => 
+        prev > 0 ? prev - 1 : suggestions.length - 1
+      );
+    } else if (e.key === 'Enter' && selectedSuggestion >= 0) {
+      e.preventDefault();
+      selectSuggestion(suggestions[selectedSuggestion]);
+    } else if (e.key === 'Escape') {
+      setShowSuggestions(false);
+      setSelectedSuggestion(-1);
+    }
+  };
+
+  // Close suggestions when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (titleInputRef.current && !titleInputRef.current.contains(event.target as Node)) {
+        setShowSuggestions(false);
+      }
+    };
+    
+    if (showSuggestions) {
+      document.addEventListener('mousedown', handleClickOutside);
+      return () => document.removeEventListener('mousedown', handleClickOutside);
+    }
+  }, [showSuggestions]);
 
   return (
     <Dialog open={isOpen} onOpenChange={(open) => {
@@ -165,16 +266,69 @@ export function AddTaskModal({ isOpen, onClose, onAdd }: AddTaskModalProps) {
             <TabsContent value="manual" className="space-y-4">
               <form onSubmit={handleSubmit} className="space-y-4">
                 <div className="space-y-2">
-                  <Label htmlFor="title">Title (max 100 characters)</Label>
-                  <Input
-                    id="title"
-                    value={title}
-                    onChange={(e) => setTitle(e.target.value.slice(0, 100))}
-                    placeholder="Enter task title..."
-                    className="w-full"
-                    maxLength={100}
-                    autoFocus
-                  />
+                  <Label htmlFor="title" className="flex items-center gap-2">
+                    Title (max 100 characters)
+                    {!apiKey && (
+                      <span className="text-xs text-muted-foreground flex items-center gap-1">
+                        <Lightbulb className="h-3 w-3" />
+                        AI suggestions available with API key
+                      </span>
+                    )}
+                  </Label>
+                  <div className="relative" ref={titleInputRef}>
+                    <Input
+                      id="title"
+                      value={title}
+                      onChange={(e) => handleTitleChange(e.target.value)}
+                      onKeyDown={handleKeyDown}
+                      onFocus={() => {
+                        if (title.length >= 2 && suggestions.length > 0) {
+                          setShowSuggestions(true);
+                        }
+                      }}
+                      placeholder="Start typing for suggestions..."
+                      className="w-full"
+                      maxLength={100}
+                      autoFocus
+                    />
+                    
+                    {/* Suggestions dropdown */}
+                    {showSuggestions && suggestions.length > 0 && (
+                      <div className="absolute z-50 w-full mt-1 bg-popover border rounded-md shadow-lg animate-fade-in">
+                        <div className="p-2 space-y-1">
+                          <div className="text-xs text-muted-foreground px-2 py-1 flex items-center gap-1">
+                            <Lightbulb className="h-3 w-3" />
+                            Suggestions {apiKey ? '(AI-powered)' : '(Templates)'}
+                          </div>
+                          {suggestions.map((suggestion, index) => (
+                            <button
+                              key={index}
+                              type="button"
+                              className={cn(
+                                "w-full text-left p-2 rounded-sm transition-colors",
+                                "hover:bg-accent hover:text-accent-foreground",
+                                selectedSuggestion === index && "bg-accent text-accent-foreground"
+                              )}
+                              onClick={() => selectSuggestion(suggestion)}
+                              onMouseEnter={() => setSelectedSuggestion(index)}
+                            >
+                              <div className="font-medium text-sm">{suggestion.title}</div>
+                              <div className="text-xs text-muted-foreground mt-0.5">
+                                {suggestion.description}
+                              </div>
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+                    
+                    {/* Loading indicator */}
+                    {isLoadingSuggestions && (
+                      <div className="absolute right-2 top-1/2 -translate-y-1/2">
+                        <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
+                      </div>
+                    )}
+                  </div>
                 </div>
                 <div className="space-y-2">
                   <Label htmlFor="description">Description (max 500 characters)</Label>
