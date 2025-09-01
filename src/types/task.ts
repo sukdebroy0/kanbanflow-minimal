@@ -5,6 +5,10 @@ export interface Task {
   title: string;
   description: string;
   status: TaskStatus;
+  dueDate?: Date;
+  dueTime?: string;
+  reminderTime?: number; // minutes before due date/time
+  notificationSent?: boolean;
   createdAt: Date;
   updatedAt: Date;
 }

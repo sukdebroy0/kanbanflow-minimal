@@ -13,7 +13,7 @@ import { arrayMove } from '@dnd-kit/sortable';
 import { Task, TaskStatus, TaskColumn as TaskColumnType } from '@/types/task';
 import { TaskColumn } from './TaskColumn';
 import { TaskCard } from './TaskCard';
-import { AddTaskModal } from './AddTaskModal';
+import { EnhancedAddTaskModal } from './EnhancedAddTaskModal';
 import { EditTaskModal } from './EditTaskModal';
 import { FilterBar } from './FilterBar';
 import { Button } from '@/components/ui/button';
@@ -21,6 +21,12 @@ import { Switch } from '@/components/ui/switch';
 import { Plus, Moon, Sun } from 'lucide-react';
 import { toast } from 'sonner';
 import { useTheme } from '@/hooks/useTheme';
+import { LiveClock } from './LiveClock';
+import { DateFilter, type DateFilterType } from './DateFilter';
+import { TaskStatistics } from './TaskStatistics';
+import { scheduleNotification, requestNotificationPermission } from '@/utils/notifications';
+import { DateRange } from 'react-day-picker';
+import { startOfDay, endOfDay, startOfWeek, endOfWeek, isAfter, isBefore, isWithinInterval } from 'date-fns';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -342,10 +348,27 @@ export function KanbanBoard() {
           </DragOverlay>
         </DndContext>
 
-        <AddTaskModal
+        <EnhancedAddTaskModal
           isOpen={isAddModalOpen}
           onClose={() => setIsAddModalOpen(false)}
-          onAdd={handleAddTask}
+          onAdd={(task) => {
+            const newTask: Task = {
+              id: Date.now().toString(),
+              title: task.title,
+              description: task.description,
+              status: 'todo',
+              dueDate: task.dueDate,
+              dueTime: task.dueTime,
+              reminderTime: task.reminderTime,
+              createdAt: new Date(),
+              updatedAt: new Date(),
+            };
+            setTasks(prev => [...prev, newTask]);
+            if (task.reminderTime) {
+              scheduleNotification(newTask);
+            }
+            toast.success('Task added successfully');
+          }}
         />
 
         <EditTaskModal
