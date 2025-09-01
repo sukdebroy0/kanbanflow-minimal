@@ -20,11 +20,11 @@ export function TaskColumn({ column, onEdit, onDelete, onComplete }: TaskColumnP
   const getColumnStyles = () => {
     switch (column.id) {
       case 'todo':
-        return 'bg-todo/30 border-todo';
+        return 'bg-muted/50 border-muted';
       case 'in-progress':
-        return 'bg-progress/10 border-progress/30';
+        return 'bg-yellow-500/10 border-yellow-500/30';
       case 'done':
-        return 'bg-done/10 border-done/30';
+        return 'bg-green-500/10 border-green-500/30';
       default:
         return 'bg-muted/30 border-border';
     }
@@ -33,11 +33,11 @@ export function TaskColumn({ column, onEdit, onDelete, onComplete }: TaskColumnP
   const getHeaderStyles = () => {
     switch (column.id) {
       case 'todo':
-        return 'text-todo-foreground';
+        return 'text-muted-foreground';
       case 'in-progress':
-        return 'text-progress';
+        return 'text-yellow-600 dark:text-yellow-400';
       case 'done':
-        return 'text-done';
+        return 'text-green-600 dark:text-green-400';
       default:
         return 'text-foreground';
     }

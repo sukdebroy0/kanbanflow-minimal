@@ -276,7 +276,7 @@ export function KanbanBoard() {
   const completedCount = tasks.filter(task => task.status === 'done').length;
 
   return (
-    <div className="min-h-screen bg-gradient-subtle p-4 sm:p-6 lg:p-8">
+    <div className="min-h-screen bg-gradient-to-br from-background to-muted/20 p-4 sm:p-6 lg:p-8">
       <div className="max-w-7xl mx-auto space-y-6">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-3">
@@ -293,7 +293,7 @@ export function KanbanBoard() {
               />
               <Moon className="h-4 w-4 text-muted-foreground" />
             </div>
-            <Button onClick={() => setIsAddModalOpen(true)} className="bg-gradient-primary">
+            <Button onClick={() => setIsAddModalOpen(true)} className="bg-gradient-to-r from-primary to-primary/80 text-primary-foreground hover:from-primary/90 hover:to-primary/70">
               <Plus className="h-4 w-4 mr-2" />
               Add Task
             </Button>
