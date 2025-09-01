@@ -18,7 +18,7 @@ import { EditTaskModal } from './EditTaskModal';
 import { FilterBar } from './FilterBar';
 import { Button } from '@/components/ui/button';
 import { Switch } from '@/components/ui/switch';
-import { Plus, Moon, Sun } from 'lucide-react';
+import { Plus, Moon, Sun, ClipboardList } from 'lucide-react';
 import { toast } from 'sonner';
 import { useTheme } from '@/hooks/useTheme';
 import { LiveClock } from './LiveClock';
@@ -279,9 +279,9 @@ export function KanbanBoard() {
     <div className="min-h-screen bg-gradient-subtle p-4 sm:p-6 lg:p-8">
       <div className="max-w-7xl mx-auto space-y-6">
         <div className="flex items-center justify-between">
-          <div>
-            <h1 className="text-3xl font-bold text-foreground">Task Manager</h1>
-            <p className="text-muted-foreground mt-1">Organize your tasks with drag and drop</p>
+          <div className="flex items-center gap-3">
+            <ClipboardList className="h-8 w-8 text-primary" />
+            <LiveClock />
           </div>
           <div className="flex items-center gap-3">
             <div className="flex items-center gap-2 px-3 py-2 bg-card rounded-lg border shadow-sm">
