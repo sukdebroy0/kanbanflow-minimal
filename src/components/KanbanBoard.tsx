@@ -14,7 +14,7 @@ import { Task, TaskStatus, TaskColumn as TaskColumnType } from '@/types/task';
 import { TaskColumn } from './TaskColumn';
 import { TaskCard } from './TaskCard';
 import { EnhancedAddTaskModal } from './EnhancedAddTaskModal';
-import { EditTaskModal } from './EditTaskModal';
+import { EnhancedEditTaskModal } from './EnhancedEditTaskModal';
 import { FilterBar } from './FilterBar';
 import { Button } from '@/components/ui/button';
 import { Switch } from '@/components/ui/switch';
@@ -219,14 +219,18 @@ export function KanbanBoard() {
     toast.success('Task added successfully');
   };
 
-  const handleEditTask = (taskId: string, title: string, description: string) => {
+  const handleEditTask = (updatedTask: Task) => {
     setTasks(prev =>
       prev.map(task =>
-        task.id === taskId
-          ? { ...task, title, description, updatedAt: new Date() }
-          : task
+        task.id === updatedTask.id ? updatedTask : task
       )
     );
+    
+    // Schedule notification if reminder is set
+    if (updatedTask.reminderTime && notificationsEnabled) {
+      scheduleNotification(updatedTask);
+    }
+    
     toast.success('Task updated successfully');
   };
 
@@ -452,7 +456,7 @@ export function KanbanBoard() {
           }}
         />
 
-        <EditTaskModal
+        <EnhancedEditTaskModal
           task={editingTask}
           isOpen={isEditModalOpen}
           onClose={() => {
