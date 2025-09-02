@@ -346,7 +346,7 @@ export function KanbanBoard() {
       <div className="max-w-7xl mx-auto space-y-6">
         <div className="flex items-center justify-between flex-wrap gap-4">
           <div className="flex items-center gap-3">
-            <ClipboardList className="h-8 w-8 text-primary" />
+            <ClipboardList className="h-8 w-8 text-primary" aria-label="Task Manager" />
             <LiveClock />
           </div>
           <div className="flex items-center gap-3">
