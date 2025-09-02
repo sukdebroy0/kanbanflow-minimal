@@ -3,8 +3,10 @@ import { CSS } from '@dnd-kit/utilities';
 import { Task } from '@/types/task';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
-import { GripVertical, Edit2, Trash2, Check } from 'lucide-react';
+import { Badge } from '@/components/ui/badge';
+import { GripVertical, Edit2, Trash2, Check, Clock, Calendar, Bell } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { format, isPast, isToday, isTomorrow } from 'date-fns';
 
 interface TaskCardProps {
   task: Task;
@@ -27,6 +29,32 @@ export function TaskCard({ task, onEdit, onDelete, onComplete }: TaskCardProps) 
     transform: CSS.Transform.toString(transform),
     transition,
   };
+
+  const getDueDateDisplay = () => {
+    if (!task.dueDate) return null;
+    
+    const dueDate = new Date(task.dueDate);
+    if (task.dueTime) {
+      const [hours, minutes] = task.dueTime.split(':');
+      dueDate.setHours(parseInt(hours), parseInt(minutes));
+    }
+    
+    const now = new Date();
+    const isOverdue = task.status !== 'done' && isPast(dueDate) && !isToday(dueDate);
+    
+    let dateText = '';
+    if (isToday(dueDate)) {
+      dateText = `Today${task.dueTime ? ` at ${task.dueTime}` : ''}`;
+    } else if (isTomorrow(dueDate)) {
+      dateText = `Tomorrow${task.dueTime ? ` at ${task.dueTime}` : ''}`;
+    } else {
+      dateText = format(dueDate, task.dueTime ? 'MMM d, h:mm a' : 'MMM d');
+    }
+    
+    return { text: dateText, isOverdue };
+  };
+  
+  const dueDateInfo = getDueDateDisplay();
 
   return (
     <div
@@ -57,6 +85,26 @@ export function TaskCard({ task, onEdit, onDelete, onComplete }: TaskCardProps) 
             <p className="text-sm text-muted-foreground line-clamp-2">
               {task.description}
             </p>
+            
+            {(dueDateInfo || task.reminderTime) && (
+              <div className="flex items-center gap-2 mt-2 flex-wrap">
+                {dueDateInfo && (
+                  <Badge 
+                    variant={dueDateInfo.isOverdue ? "destructive" : "secondary"}
+                    className="text-xs"
+                  >
+                    <Calendar className="h-3 w-3 mr-1" />
+                    {dueDateInfo.text}
+                  </Badge>
+                )}
+                {task.reminderTime && (
+                  <Badge variant="outline" className="text-xs">
+                    <Bell className="h-3 w-3 mr-1" />
+                    {task.reminderTime} min reminder
+                  </Badge>
+                )}
+              </div>
+            )}
             
             <div className="flex items-center gap-1 mt-3">
               {task.status !== 'done' && (

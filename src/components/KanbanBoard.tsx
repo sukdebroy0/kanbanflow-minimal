@@ -18,7 +18,7 @@ import { EditTaskModal } from './EditTaskModal';
 import { FilterBar } from './FilterBar';
 import { Button } from '@/components/ui/button';
 import { Switch } from '@/components/ui/switch';
-import { Plus, Moon, Sun, ClipboardList } from 'lucide-react';
+import { Plus, Moon, Sun, ClipboardList, Bell } from 'lucide-react';
 import { toast } from 'sonner';
 import { useTheme } from '@/hooks/useTheme';
 import { LiveClock } from './LiveClock';
@@ -26,7 +26,7 @@ import { DateFilter, type DateFilterType } from './DateFilter';
 import { TaskStatistics } from './TaskStatistics';
 import { scheduleNotification, requestNotificationPermission } from '@/utils/notifications';
 import { DateRange } from 'react-day-picker';
-import { startOfDay, endOfDay, startOfWeek, endOfWeek, isAfter, isBefore, isWithinInterval } from 'date-fns';
+import { startOfDay, endOfDay, startOfWeek, endOfWeek, isAfter, isBefore, isWithinInterval, isPast, isToday } from 'date-fns';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -51,6 +51,9 @@ export function KanbanBoard() {
   const [searchTerm, setSearchTerm] = useState('');
   const [filterStatus, setFilterStatus] = useState<TaskStatus | 'all'>('all');
   const [showDeleteAllDialog, setShowDeleteAllDialog] = useState(false);
+  const [dateFilterType, setDateFilterType] = useState<DateFilterType>('all');
+  const [customDateRange, setCustomDateRange] = useState<DateRange | undefined>();
+  const [notificationsEnabled, setNotificationsEnabled] = useState(false);
 
   const sensors = useSensors(
     useSensor(PointerSensor, {
@@ -60,7 +63,7 @@ export function KanbanBoard() {
     })
   );
 
-  // Load tasks from localStorage on mount
+  // Load tasks from localStorage on mount and request notification permission
   useEffect(() => {
     const stored = localStorage.getItem(STORAGE_KEY);
     if (stored) {
@@ -70,11 +73,20 @@ export function KanbanBoard() {
           ...task,
           createdAt: new Date(task.createdAt),
           updatedAt: new Date(task.updatedAt),
+          dueDate: task.dueDate ? new Date(task.dueDate) : undefined,
         })));
       } catch (error) {
         console.error('Failed to load tasks:', error);
       }
     }
+    
+    // Request notification permission
+    requestNotificationPermission().then(granted => {
+      setNotificationsEnabled(granted);
+      if (granted) {
+        toast.success('Notifications enabled for task reminders');
+      }
+    });
   }, []);
 
   // Save tasks to localStorage whenever they change
@@ -88,9 +100,42 @@ export function KanbanBoard() {
       const matchesSearch = task.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
                           task.description.toLowerCase().includes(searchTerm.toLowerCase());
       const matchesFilter = filterStatus === 'all' || task.status === filterStatus;
-      return matchesSearch && matchesFilter;
+      
+      // Date filtering
+      let matchesDate = true;
+      if (dateFilterType !== 'all' && task.dueDate) {
+        const taskDate = new Date(task.dueDate);
+        const now = new Date();
+        
+        switch (dateFilterType) {
+          case 'today':
+            matchesDate = isToday(taskDate);
+            break;
+          case 'week':
+            matchesDate = isWithinInterval(taskDate, {
+              start: startOfWeek(now),
+              end: endOfWeek(now)
+            });
+            break;
+          case 'overdue':
+            matchesDate = isPast(taskDate) && !isToday(taskDate) && task.status !== 'done';
+            break;
+          case 'custom':
+            if (customDateRange?.from && customDateRange?.to) {
+              matchesDate = isWithinInterval(taskDate, {
+                start: startOfDay(customDateRange.from),
+                end: endOfDay(customDateRange.to)
+              });
+            }
+            break;
+        }
+      } else if (dateFilterType !== 'all' && !task.dueDate) {
+        matchesDate = false;
+      }
+      
+      return matchesSearch && matchesFilter && matchesDate;
     });
-  }, [tasks, searchTerm, filterStatus]);
+  }, [tasks, searchTerm, filterStatus, dateFilterType, customDateRange]);
 
   const columns: TaskColumnType[] = [
     {
@@ -275,15 +320,42 @@ export function KanbanBoard() {
   const activeTask = tasks.find(task => task.id === activeId);
   const completedCount = tasks.filter(task => task.status === 'done').length;
 
+  const handleDateFilterChange = (type: DateFilterType, range?: DateRange) => {
+    setDateFilterType(type);
+    if (range) {
+      setCustomDateRange(range);
+    }
+  };
+
+  const enableNotifications = async () => {
+    const granted = await requestNotificationPermission();
+    setNotificationsEnabled(granted);
+    if (granted) {
+      toast.success('Notifications enabled!');
+    } else {
+      toast.error('Please enable notifications in your browser settings');
+    }
+  };
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-background to-muted/20 p-4 sm:p-6 lg:p-8">
       <div className="max-w-7xl mx-auto space-y-6">
-        <div className="flex items-center justify-between">
+        <div className="flex items-center justify-between flex-wrap gap-4">
           <div className="flex items-center gap-3">
             <ClipboardList className="h-8 w-8 text-primary" />
             <LiveClock />
           </div>
           <div className="flex items-center gap-3">
+            {!notificationsEnabled && (
+              <Button 
+                onClick={enableNotifications}
+                variant="outline"
+                size="sm"
+              >
+                <Bell className="h-4 w-4 mr-2" />
+                Enable Notifications
+              </Button>
+            )}
             <div className="flex items-center gap-2 px-3 py-2 bg-card rounded-lg border shadow-sm">
               <Sun className="h-4 w-4 text-muted-foreground" />
               <Switch
@@ -299,6 +371,14 @@ export function KanbanBoard() {
             </Button>
           </div>
         </div>
+
+        <TaskStatistics tasks={tasks} />
+
+        <DateFilter 
+          filterType={dateFilterType}
+          customDateRange={customDateRange}
+          onFilterChange={handleDateFilterChange}
+        />
 
         <FilterBar
           searchTerm={searchTerm}
@@ -364,7 +444,8 @@ export function KanbanBoard() {
               updatedAt: new Date(),
             };
             setTasks(prev => [...prev, newTask]);
-            if (task.reminderTime) {
+            
+            if (task.reminderTime && notificationsEnabled) {
               scheduleNotification(newTask);
             }
             toast.success('Task added successfully');
