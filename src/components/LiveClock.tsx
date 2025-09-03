@@ -31,11 +31,11 @@ export function LiveClock() {
   };
 
   return (
-    <div className="flex items-center gap-2 text-sm">
-      <Clock className="h-4 w-4 text-muted-foreground" aria-label="Clock icon" />
+    <div className="flex items-center gap-2 text-xs sm:text-sm">
+      <Clock className="h-3.5 w-3.5 sm:h-4 sm:w-4 text-muted-foreground" aria-label="Clock icon" />
       <div className="flex flex-col items-end">
-        <span className="font-medium text-foreground tabular-nums">{formatTime(time)}</span>
-        <span className="text-xs text-muted-foreground">{formatDate(time)}</span>
+        <span className="font-medium text-foreground tabular-nums text-xs sm:text-sm">{formatTime(time)}</span>
+        <span className="text-[10px] sm:text-xs text-muted-foreground">{formatDate(time)}</span>
       </div>
     </div>
   );

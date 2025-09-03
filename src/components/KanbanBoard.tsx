@@ -344,33 +344,38 @@ export function KanbanBoard() {
   return (
     <div className="min-h-screen bg-gradient-to-br from-background to-muted/20 p-4 sm:p-6 lg:p-8">
       <div className="max-w-7xl mx-auto space-y-6">
-        <div className="flex items-center justify-between flex-wrap gap-4">
+        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
           <div className="flex items-center gap-3">
-            <ClipboardList className="h-8 w-8 text-primary" aria-label="Task Manager" />
+            <ClipboardList className="h-6 w-6 sm:h-8 sm:w-8 text-primary" aria-label="Task Manager" />
             <LiveClock />
           </div>
-          <div className="flex items-center gap-3">
+          <div className="flex flex-wrap items-center gap-2 sm:gap-3 w-full sm:w-auto">
             {!notificationsEnabled && (
               <Button 
                 onClick={enableNotifications}
                 variant="outline"
                 size="sm"
+                className="text-xs sm:text-sm"
               >
-                <Bell className="h-4 w-4 mr-2" />
-                Enable Notifications
+                <Bell className="h-4 w-4 mr-1 sm:mr-2" />
+                <span className="hidden sm:inline">Enable</span> Notifications
               </Button>
             )}
-            <div className="flex items-center gap-2 px-3 py-2 bg-card rounded-lg border shadow-sm">
-              <Sun className="h-4 w-4 text-muted-foreground" />
+            <div className="flex items-center gap-2 px-2 sm:px-3 py-1.5 sm:py-2 bg-card rounded-lg border shadow-sm">
+              <Sun className="h-3.5 w-3.5 sm:h-4 sm:w-4 text-muted-foreground" />
               <Switch
                 checked={theme === 'dark'}
                 onCheckedChange={toggleTheme}
                 aria-label="Toggle theme"
+                className="h-4 w-8 sm:h-5 sm:w-9"
               />
-              <Moon className="h-4 w-4 text-muted-foreground" />
+              <Moon className="h-3.5 w-3.5 sm:h-4 sm:w-4 text-muted-foreground" />
             </div>
-            <Button onClick={() => setIsAddModalOpen(true)} className="bg-gradient-to-r from-primary to-primary/80 text-primary-foreground hover:from-primary/90 hover:to-primary/70">
-              <Plus className="h-4 w-4 mr-2" />
+            <Button 
+              onClick={() => setIsAddModalOpen(true)} 
+              className="bg-gradient-to-r from-primary to-primary/80 text-primary-foreground hover:from-primary/90 hover:to-primary/70 text-xs sm:text-sm px-3 sm:px-4"
+            >
+              <Plus className="h-4 w-4 mr-1 sm:mr-2" />
               Add Task
             </Button>
           </div>

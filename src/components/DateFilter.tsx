@@ -45,35 +45,39 @@ export function DateFilter({ filterType, customDateRange, onFilterChange }: Date
   };
 
   return (
-    <div className="flex items-center gap-2">
+    <div className="flex flex-wrap items-center gap-2">
       <Button
         variant={filterType === 'all' ? 'default' : 'outline'}
         size="sm"
         onClick={() => onFilterChange('all')}
+        className="text-xs sm:text-sm h-8 sm:h-9"
       >
-        <Calendar className="mr-2 h-4 w-4" />
+        <Calendar className="mr-1 sm:mr-2 h-3.5 w-3.5 sm:h-4 sm:w-4" />
         All
       </Button>
       <Button
         variant={filterType === 'today' ? 'default' : 'outline'}
         size="sm"
         onClick={() => onFilterChange('today')}
+        className="text-xs sm:text-sm h-8 sm:h-9"
       >
-        <CalendarDays className="mr-2 h-4 w-4" />
+        <CalendarDays className="mr-1 sm:mr-2 h-3.5 w-3.5 sm:h-4 sm:w-4" />
         Today
       </Button>
       <Button
         variant={filterType === 'week' ? 'default' : 'outline'}
         size="sm"
         onClick={() => onFilterChange('week')}
+        className="text-xs sm:text-sm h-8 sm:h-9"
       >
-        <CalendarRange className="mr-2 h-4 w-4" />
-        This Week
+        <CalendarRange className="mr-1 sm:mr-2 h-3.5 w-3.5 sm:h-4 sm:w-4" />
+        <span className="hidden sm:inline">This</span> Week
       </Button>
       <Button
         variant={filterType === 'overdue' ? 'destructive' : 'outline'}
         size="sm"
         onClick={() => onFilterChange('overdue')}
+        className="text-xs sm:text-sm h-8 sm:h-9"
       >
         Overdue
       </Button>
@@ -82,17 +86,18 @@ export function DateFilter({ filterType, customDateRange, onFilterChange }: Date
           <Button
             variant={filterType === 'custom' ? 'default' : 'outline'}
             size="sm"
+            className="text-xs sm:text-sm h-8 sm:h-9"
           >
-            <CalendarRange className="mr-2 h-4 w-4" />
+            <CalendarRange className="mr-1 sm:mr-2 h-3.5 w-3.5 sm:h-4 sm:w-4" />
             {filterType === 'custom' ? getFilterLabel() : 'Custom'}
           </Button>
         </PopoverTrigger>
-        <PopoverContent className="w-auto p-0" align="start">
+        <PopoverContent className="w-auto p-0 z-50" align="start">
           <CalendarComponent
             mode="range"
             selected={dateRange}
             onSelect={handleCustomRangeSelect}
-            numberOfMonths={2}
+            numberOfMonths={window.innerWidth < 640 ? 1 : 2}
             className="pointer-events-auto"
           />
         </PopoverContent>

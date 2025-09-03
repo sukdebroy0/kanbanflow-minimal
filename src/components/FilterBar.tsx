@@ -80,8 +80,9 @@ export function FilterBar({
             size="sm"
             onClick={onClearCompleted}
             disabled={completedTasks === 0}
+            className="text-xs sm:text-sm h-8 sm:h-9"
           >
-            Clear Completed
+            <span className="hidden sm:inline">Clear</span> Completed
           </Button>
           
           <Button
@@ -89,10 +90,10 @@ export function FilterBar({
             size="sm"
             onClick={onDeleteAll}
             disabled={totalTasks === 0}
-            className="text-destructive hover:text-destructive"
+            className="text-destructive hover:text-destructive text-xs sm:text-sm h-8 sm:h-9"
           >
-            <Trash2 className="h-4 w-4 mr-1" />
-            Delete All
+            <Trash2 className="h-3.5 w-3.5 sm:h-4 sm:w-4 mr-1" />
+            <span className="hidden sm:inline">Delete</span> All
           </Button>
           
           <Button
@@ -100,8 +101,9 @@ export function FilterBar({
             size="sm"
             onClick={onExport}
             disabled={totalTasks === 0}
+            className="text-xs sm:text-sm h-8 sm:h-9"
           >
-            <Download className="h-4 w-4 mr-1" />
+            <Download className="h-3.5 w-3.5 sm:h-4 sm:w-4 mr-1" />
             Export
           </Button>
           
@@ -110,9 +112,10 @@ export function FilterBar({
               variant="outline"
               size="sm"
               asChild
+              className="text-xs sm:text-sm h-8 sm:h-9"
             >
               <span>
-                <Upload className="h-4 w-4 mr-1" />
+                <Upload className="h-3.5 w-3.5 sm:h-4 sm:w-4 mr-1" />
                 Import
               </span>
             </Button>
