@@ -206,16 +206,31 @@ export function KanbanBoard() {
     setActiveId(null);
   };
 
-  const handleAddTask = (title: string, description: string) => {
+  const handleAddTask = (taskData: { 
+    title: string; 
+    description: string; 
+    dueDate?: Date; 
+    dueTime?: string; 
+    reminderTime?: number 
+  }) => {
     const newTask: Task = {
       id: Date.now().toString(),
-      title,
-      description,
+      title: taskData.title,
+      description: taskData.description,
       status: 'todo',
       createdAt: new Date(),
       updatedAt: new Date(),
+      dueDate: taskData.dueDate,
+      dueTime: taskData.dueTime,
+      reminderTime: taskData.reminderTime,
     };
     setTasks(prev => [...prev, newTask]);
+    
+    // Schedule notification if reminder is set
+    if (newTask.reminderTime && notificationsEnabled) {
+      scheduleNotification(newTask);
+    }
+    
     toast.success('Task added successfully');
   };
 
@@ -440,25 +455,7 @@ export function KanbanBoard() {
         <EnhancedAddTaskModal
           isOpen={isAddModalOpen}
           onClose={() => setIsAddModalOpen(false)}
-          onAdd={(task) => {
-            const newTask: Task = {
-              id: Date.now().toString(),
-              title: task.title,
-              description: task.description,
-              status: 'todo',
-              dueDate: task.dueDate,
-              dueTime: task.dueTime,
-              reminderTime: task.reminderTime,
-              createdAt: new Date(),
-              updatedAt: new Date(),
-            };
-            setTasks(prev => [...prev, newTask]);
-            
-            if (task.reminderTime && notificationsEnabled) {
-              scheduleNotification(newTask);
-            }
-            toast.success('Task added successfully');
-          }}
+          onAdd={handleAddTask}
         />
 
         <EnhancedEditTaskModal
