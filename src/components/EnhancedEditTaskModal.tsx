@@ -148,15 +148,15 @@ export function EnhancedEditTaskModal({ task, isOpen, onClose, onSave }: Enhance
               Reminder
             </Label>
             <Select 
-              value={reminderTime?.toString()} 
-              onValueChange={(value) => setReminderTime(value ? parseInt(value) : undefined)}
+              value={reminderTime === undefined ? "none" : reminderTime.toString()} 
+              onValueChange={(value) => setReminderTime(value === "none" ? undefined : parseInt(value))}
               disabled={!dueDate}
             >
               <SelectTrigger id="edit-reminder">
                 <SelectValue placeholder="No reminder" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="">No reminder</SelectItem>
+                <SelectItem value="none">No reminder</SelectItem>
                 <SelectItem value="5">5 minutes before</SelectItem>
                 <SelectItem value="10">10 minutes before</SelectItem>
                 <SelectItem value="15">15 minutes before</SelectItem>

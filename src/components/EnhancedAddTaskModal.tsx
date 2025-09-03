@@ -34,7 +34,7 @@ export function EnhancedAddTaskModal({ isOpen, onClose, onAdd }: AddTaskModalPro
   const [description, setDescription] = useState('');
   const [dueDate, setDueDate] = useState<Date | undefined>();
   const [dueTime, setDueTime] = useState('');
-  const [reminderTime, setReminderTime] = useState<string>('');
+  const [reminderTime, setReminderTime] = useState<string>('none');
   const [aiPrompt, setAiPrompt] = useState('');
   const [apiKey, setApiKey] = useState('');
   const [isGenerating, setIsGenerating] = useState(false);
@@ -67,7 +67,7 @@ export function EnhancedAddTaskModal({ isOpen, onClose, onAdd }: AddTaskModalPro
     
     if (trimmedTitle) {
       // Request notification permission if reminder is set
-      if (reminderTime) {
+      if (reminderTime !== 'none') {
         await requestNotificationPermission();
       }
       
@@ -76,7 +76,7 @@ export function EnhancedAddTaskModal({ isOpen, onClose, onAdd }: AddTaskModalPro
         description: trimmedDescription,
         dueDate,
         dueTime,
-        reminderTime: reminderTime ? parseInt(reminderTime) : undefined
+        reminderTime: reminderTime !== 'none' ? parseInt(reminderTime) : undefined
       });
       
       resetForm();
@@ -147,7 +147,7 @@ export function EnhancedAddTaskModal({ isOpen, onClose, onAdd }: AddTaskModalPro
     setDescription('');
     setDueDate(undefined);
     setDueTime('');
-    setReminderTime('');
+    setReminderTime('none');
     setAiPrompt('');
     setGeneratedTasks([]);
     setSuggestions([]);
@@ -445,7 +445,7 @@ export function EnhancedAddTaskModal({ isOpen, onClose, onAdd }: AddTaskModalPro
                       <SelectValue placeholder="No reminder" />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="">No reminder</SelectItem>
+                      <SelectItem value="none">No reminder</SelectItem>
                       <SelectItem value="0">At due time</SelectItem>
                       <SelectItem value="5">5 minutes before</SelectItem>
                       <SelectItem value="10">10 minutes before</SelectItem>
