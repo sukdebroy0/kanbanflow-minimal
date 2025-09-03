@@ -7,12 +7,14 @@ import { Task } from '@/types/task';
 
 interface TaskColumnProps {
   column: TaskColumnType;
+  selectedTaskId?: string | null;
   onEdit: (task: Task) => void;
   onDelete: (taskId: string) => void;
   onComplete: (taskId: string) => void;
+  onTaskSelect?: (taskId: string) => void;
 }
 
-export function TaskColumn({ column, onEdit, onDelete, onComplete }: TaskColumnProps) {
+export function TaskColumn({ column, selectedTaskId, onEdit, onDelete, onComplete, onTaskSelect }: TaskColumnProps) {
   const { setNodeRef, isOver } = useDroppable({
     id: column.id,
   });
@@ -72,9 +74,11 @@ export function TaskColumn({ column, onEdit, onDelete, onComplete }: TaskColumnP
             <TaskCard
               key={task.id}
               task={task}
+              isSelected={selectedTaskId === task.id}
               onEdit={onEdit}
               onDelete={onDelete}
               onComplete={onComplete}
+              onSelect={() => onTaskSelect?.(task.id)}
             />
           ))}
         </SortableContext>

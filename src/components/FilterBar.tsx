@@ -3,6 +3,7 @@ import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Search, Filter, Trash2, Download, Upload } from 'lucide-react';
 import { TaskStatus } from '@/types/task';
+import { RefObject } from 'react';
 
 interface FilterBarProps {
   searchTerm: string;
@@ -15,6 +16,7 @@ interface FilterBarProps {
   onImport: (file: File) => void;
   totalTasks: number;
   completedTasks: number;
+  searchInputRef?: RefObject<HTMLInputElement>;
 }
 
 export function FilterBar({
@@ -28,6 +30,7 @@ export function FilterBar({
   onImport,
   totalTasks,
   completedTasks,
+  searchInputRef,
 }: FilterBarProps) {
   const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -43,9 +46,10 @@ export function FilterBar({
         <div className="relative flex-1">
           <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground h-4 w-4" />
           <Input
+            ref={searchInputRef}
             value={searchTerm}
             onChange={(e) => onSearchChange(e.target.value)}
-            placeholder="Search tasks..."
+            placeholder="Search tasks... (Ctrl+F)"
             className="pl-10"
           />
         </div>

@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo, useRef, useCallback } from 'react';
 import {
   DndContext,
   DragEndEvent,
@@ -18,15 +18,18 @@ import { EnhancedEditTaskModal } from './EnhancedEditTaskModal';
 import { FilterBar } from './FilterBar';
 import { Button } from '@/components/ui/button';
 import { Switch } from '@/components/ui/switch';
-import { Plus, Moon, Sun, ClipboardList, Bell } from 'lucide-react';
+import { Plus, Moon, Sun, ClipboardList, Bell, Keyboard } from 'lucide-react';
 import { toast } from 'sonner';
 import { useTheme } from '@/hooks/useTheme';
 import { LiveClock } from './LiveClock';
 import { DateFilter, type DateFilterType } from './DateFilter';
 import { TaskStatistics } from './TaskStatistics';
+import { KeyboardShortcutsHelp } from './KeyboardShortcutsHelp';
 import { scheduleNotification, requestNotificationPermission } from '@/utils/notifications';
 import { DateRange } from 'react-day-picker';
 import { startOfDay, endOfDay, startOfWeek, endOfWeek, isAfter, isBefore, isWithinInterval, isPast, isToday } from 'date-fns';
+import { useKeyboardShortcuts, ShortcutConfig } from '@/hooks/useKeyboardShortcuts';
+import { GeneratedTask } from '@/utils/aiTaskGenerator';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -54,6 +57,11 @@ export function KanbanBoard() {
   const [dateFilterType, setDateFilterType] = useState<DateFilterType>('all');
   const [customDateRange, setCustomDateRange] = useState<DateRange | undefined>();
   const [notificationsEnabled, setNotificationsEnabled] = useState(false);
+  const [showShortcuts, setShowShortcuts] = useState(false);
+  const [showStatistics, setShowStatistics] = useState(true);
+  const [selectedTaskId, setSelectedTaskId] = useState<string | null>(null);
+  const [focusedColumn, setFocusedColumn] = useState<number>(0);
+  const searchInputRef = useRef<HTMLInputElement>(null);
 
   const sensors = useSensors(
     useSensor(PointerSensor, {
@@ -356,6 +364,158 @@ export function KanbanBoard() {
     }
   };
 
+  // Keyboard navigation helpers
+  const getSelectedTask = useCallback(() => {
+    return tasks.find(t => t.id === selectedTaskId);
+  }, [tasks, selectedTaskId]);
+
+  const selectNextTask = useCallback(() => {
+    const allTasks = filteredTasks;
+    if (!selectedTaskId && allTasks.length > 0) {
+      setSelectedTaskId(allTasks[0].id);
+      return;
+    }
+    const currentIndex = allTasks.findIndex(t => t.id === selectedTaskId);
+    if (currentIndex < allTasks.length - 1) {
+      setSelectedTaskId(allTasks[currentIndex + 1].id);
+    }
+  }, [filteredTasks, selectedTaskId]);
+
+  const selectPreviousTask = useCallback(() => {
+    const allTasks = filteredTasks;
+    if (!selectedTaskId && allTasks.length > 0) {
+      setSelectedTaskId(allTasks[allTasks.length - 1].id);
+      return;
+    }
+    const currentIndex = allTasks.findIndex(t => t.id === selectedTaskId);
+    if (currentIndex > 0) {
+      setSelectedTaskId(allTasks[currentIndex - 1].id);
+    }
+  }, [filteredTasks, selectedTaskId]);
+
+  const moveTaskToStatus = useCallback((status: TaskStatus) => {
+    const task = getSelectedTask();
+    if (task && task.status !== status) {
+      setTasks(prev => 
+        prev.map(t => 
+          t.id === task.id 
+            ? { ...t, status, updatedAt: new Date() }
+            : t
+        )
+      );
+      toast.success(`Task moved to ${status}`);
+    }
+  }, [getSelectedTask]);
+
+  const toggleTaskCompletion = useCallback(() => {
+    const task = getSelectedTask();
+    if (task) {
+      const newStatus = task.status === 'done' ? 'todo' : 'done';
+      setTasks(prev =>
+        prev.map(t =>
+          t.id === task.id
+            ? { ...t, status: newStatus, updatedAt: new Date() }
+            : t
+        )
+      );
+      toast.success(newStatus === 'done' ? 'Task completed' : 'Task reopened');
+    }
+  }, [getSelectedTask]);
+
+  const deleteSelectedTask = useCallback(() => {
+    if (selectedTaskId) {
+      setDeleteTaskId(selectedTaskId);
+    }
+  }, [selectedTaskId]);
+
+  const editSelectedTask = useCallback(() => {
+    const task = getSelectedTask();
+    if (task) {
+      setEditingTask(task);
+      setIsEditModalOpen(true);
+    }
+  }, [getSelectedTask]);
+
+  const generateAITasksHandler = useCallback(async () => {
+    try {
+      toast.info('Generating AI tasks...');
+      // Simple AI task generation
+      const aiTasks: Task[] = [
+        {
+          id: `ai-${Date.now()}-1`,
+          title: 'Review quarterly goals',
+          description: 'Analyze progress on Q4 objectives and prepare report',
+          status: 'todo',
+          createdAt: new Date(),
+          updatedAt: new Date(),
+        },
+        {
+          id: `ai-${Date.now()}-2`,
+          title: 'Schedule team meeting',
+          description: 'Organize weekly sync to discuss project updates',
+          status: 'todo',
+          createdAt: new Date(),
+          updatedAt: new Date(),
+        },
+        {
+          id: `ai-${Date.now()}-3`,
+          title: 'Update documentation',
+          description: 'Ensure all project documentation is current',
+          status: 'todo',
+          createdAt: new Date(),
+          updatedAt: new Date(),
+        }
+      ];
+      setTasks(prev => [...prev, ...aiTasks]);
+      toast.success('AI tasks generated successfully');
+    } catch (error) {
+      toast.error('Failed to generate AI tasks');
+    }
+  }, []);
+
+  // Set up keyboard shortcuts
+  const shortcuts: ShortcutConfig[] = [
+    // Task Management
+    { key: 'n', ctrl: true, action: () => setIsAddModalOpen(true), description: 'New task' },
+    { key: 'Delete', action: deleteSelectedTask, description: 'Delete selected task' },
+    { key: 'Enter', action: editSelectedTask, description: 'Edit selected task' },
+    { key: 'd', ctrl: true, shift: true, action: handleClearCompleted, description: 'Delete all completed' },
+    { key: 'a', ctrl: true, shift: true, action: generateAITasksHandler, description: 'Generate AI tasks' },
+    
+    // Navigation
+    { key: 'ArrowUp', action: selectPreviousTask, description: 'Previous task' },
+    { key: 'ArrowDown', action: selectNextTask, description: 'Next task' },
+    { key: '1', action: () => setFocusedColumn(0), description: 'Focus Todo' },
+    { key: '2', action: () => setFocusedColumn(1), description: 'Focus In Progress' },
+    { key: '3', action: () => setFocusedColumn(2), description: 'Focus Done' },
+    
+    // Task Movement
+    { key: 'q', action: () => moveTaskToStatus('todo'), description: 'Move to Todo' },
+    { key: 'w', action: () => moveTaskToStatus('in-progress'), description: 'Move to In Progress' },
+    { key: 'e', action: () => moveTaskToStatus('done'), description: 'Move to Done' },
+    { key: ' ', action: toggleTaskCompletion, description: 'Toggle completion' },
+    
+    // Filtering
+    { key: 'f', ctrl: true, action: () => searchInputRef.current?.focus(), description: 'Focus search' },
+    { key: 'Escape', action: () => {
+      setSearchTerm('');
+      setIsAddModalOpen(false);
+      setIsEditModalOpen(false);
+      setShowShortcuts(false);
+    }, description: 'Clear/Close' },
+    { key: 't', alt: true, action: () => setDateFilterType('today'), description: 'Today\'s tasks' },
+    { key: 'w', alt: true, action: () => setDateFilterType('week'), description: 'This week' },
+    { key: 'o', alt: true, action: () => setDateFilterType('overdue'), description: 'Overdue' },
+    
+    // View & UI
+    { key: 's', ctrl: true, action: () => setShowStatistics(prev => !prev), description: 'Toggle statistics' },
+    { key: 't', ctrl: true, action: toggleTheme, description: 'Toggle theme' },
+    { key: 'b', ctrl: true, action: enableNotifications, description: 'Toggle notifications' },
+    { key: '?', shift: true, action: () => setShowShortcuts(true), description: 'Show shortcuts' },
+  ];
+
+  useKeyboardShortcuts(shortcuts);
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-background to-muted/20 p-4 sm:p-6 lg:p-8">
       <div className="max-w-7xl mx-auto space-y-6">
@@ -365,6 +525,15 @@ export function KanbanBoard() {
             <LiveClock />
           </div>
           <div className="flex flex-wrap items-center gap-2 sm:gap-3 w-full sm:w-auto">
+            <Button 
+              onClick={() => setShowShortcuts(true)}
+              variant="outline"
+              size="sm"
+              className="text-xs sm:text-sm"
+            >
+              <Keyboard className="h-4 w-4 mr-1 sm:mr-2" />
+              <span className="hidden sm:inline">Shortcuts</span>
+            </Button>
             {!notificationsEnabled && (
               <Button 
                 onClick={enableNotifications}
@@ -396,7 +565,7 @@ export function KanbanBoard() {
           </div>
         </div>
 
-        <TaskStatistics tasks={tasks} />
+        {showStatistics && <TaskStatistics tasks={tasks} />}
 
         <DateFilter 
           filterType={dateFilterType}
@@ -415,6 +584,7 @@ export function KanbanBoard() {
           onImport={handleImport}
           totalTasks={tasks.length}
           completedTasks={completedCount}
+          searchInputRef={searchInputRef}
         />
 
         <DndContext
@@ -428,12 +598,14 @@ export function KanbanBoard() {
               <TaskColumn
                 key={column.id}
                 column={column}
+                selectedTaskId={selectedTaskId}
                 onEdit={(task) => {
                   setEditingTask(task);
                   setIsEditModalOpen(true);
                 }}
                 onDelete={setDeleteTaskId}
                 onComplete={handleCompleteTask}
+                onTaskSelect={setSelectedTaskId}
               />
             ))}
           </div>
@@ -501,6 +673,11 @@ export function KanbanBoard() {
             </AlertDialogFooter>
           </AlertDialogContent>
         </AlertDialog>
+
+        <KeyboardShortcutsHelp
+          isOpen={showShortcuts}
+          onClose={() => setShowShortcuts(false)}
+        />
       </div>
     </div>
   );
