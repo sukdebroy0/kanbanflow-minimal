@@ -192,6 +192,13 @@ export function KanbanBoard() {
               : task
           )
         );
+        
+        // Clear filters to show the moved task in its new column
+        if (filterStatus !== 'all' && filterStatus !== newStatus) {
+          setFilterStatus('all');
+          toast.info('Filters cleared to show moved task');
+        }
+        
         toast.success(`Task moved to ${columns.find(c => c.id === newStatus)?.title}`);
       }
     } else {
