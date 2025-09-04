@@ -10,12 +10,14 @@ import { format, isPast, isToday, isTomorrow } from 'date-fns';
 
 interface TaskCardProps {
   task: Task;
+  isSelected?: boolean;
   onEdit: (task: Task) => void;
   onDelete: (taskId: string) => void;
   onComplete: (taskId: string) => void;
+  onSelect?: () => void;
 }
 
-export function TaskCard({ task, onEdit, onDelete, onComplete }: TaskCardProps) {
+export function TaskCard({ task, isSelected, onEdit, onDelete, onComplete, onSelect }: TaskCardProps) {
   const {
     attributes,
     listeners,
@@ -64,10 +66,12 @@ export function TaskCard({ task, onEdit, onDelete, onComplete }: TaskCardProps) 
         'touch-none',
         isDragging && 'opacity-50'
       )}
+      onClick={onSelect}
     >
       <Card className={cn(
         "p-4 cursor-default hover:shadow-md transition-shadow duration-200 bg-gradient-card border-border/50",
-        isDragging && "shadow-drag"
+        isDragging && "shadow-drag",
+        isSelected && "ring-2 ring-primary ring-offset-2 ring-offset-background"
       )}>
         <div className="flex items-start gap-2">
           <button
