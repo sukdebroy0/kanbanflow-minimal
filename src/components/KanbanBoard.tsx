@@ -181,41 +181,75 @@ export function KanbanBoard() {
       return;
     }
 
-    // Check if dropped on a column
+    // Determine the target status - either from column drop or task drop
+    let targetStatus: TaskStatus | null = null;
+    let dropIndex: number | undefined;
+    
+    // Check if dropped directly on a column
     if (['todo', 'in-progress', 'done'].includes(over.id as string)) {
-      const newStatus = over.id as TaskStatus;
-      if (activeTask.status !== newStatus) {
-        setTasks(prevTasks =>
-          prevTasks.map(task =>
-            task.id === active.id
-              ? { ...task, status: newStatus, updatedAt: new Date() }
-              : task
-          )
-        );
-        
-        // Clear filters to show the moved task in its new column
-        if (filterStatus !== 'all' && filterStatus !== newStatus) {
-          setFilterStatus('all');
-          toast.info('Filters cleared to show moved task');
-        }
-        
-        toast.success(`Task moved to ${columns.find(c => c.id === newStatus)?.title}`);
-      }
+      targetStatus = over.id as TaskStatus;
     } else {
-      // Dropped on another task - reorder within column
+      // Dropped on a task - find which column it belongs to
       const overTask = tasks.find(task => task.id === over.id);
-      if (overTask && activeTask.status === overTask.status) {
-        const columnTasks = tasks.filter(task => task.status === activeTask.status);
-        const oldIndex = columnTasks.findIndex(task => task.id === active.id);
-        const newIndex = columnTasks.findIndex(task => task.id === over.id);
-        
-        const reorderedTasks = arrayMove(columnTasks, oldIndex, newIndex);
-        
-        setTasks(prevTasks => {
-          const otherTasks = prevTasks.filter(task => task.status !== activeTask.status);
-          return [...otherTasks, ...reorderedTasks];
-        });
+      if (overTask) {
+        targetStatus = overTask.status;
+        // Calculate the drop position
+        const columnTasks = tasks.filter(task => task.status === overTask.status);
+        dropIndex = columnTasks.findIndex(task => task.id === over.id);
       }
+    }
+
+    if (!targetStatus) {
+      setActiveId(null);
+      return;
+    }
+
+    // Update the task status and reorder if needed
+    setTasks(prevTasks => {
+      let updatedTasks = [...prevTasks];
+      
+      // First, update the task status if it changed
+      if (activeTask.status !== targetStatus) {
+        updatedTasks = updatedTasks.map(task =>
+          task.id === active.id
+            ? { ...task, status: targetStatus, updatedAt: new Date() }
+            : task
+        );
+      }
+      
+      // Then handle reordering within the target column
+      if (dropIndex !== undefined) {
+        const targetColumnTasks = updatedTasks.filter(task => task.status === targetStatus);
+        const activeTaskIndex = targetColumnTasks.findIndex(task => task.id === active.id);
+        
+        if (activeTaskIndex !== -1 && activeTaskIndex !== dropIndex) {
+          const reorderedColumnTasks = arrayMove(targetColumnTasks, activeTaskIndex, dropIndex);
+          const otherTasks = updatedTasks.filter(task => task.status !== targetStatus);
+          updatedTasks = [...otherTasks, ...reorderedColumnTasks];
+        }
+      }
+      
+      return updatedTasks;
+    });
+    
+    // Clear filters if needed to show the moved task
+    if (activeTask.status !== targetStatus) {
+      // Clear status filter if it would hide the moved task
+      if (filterStatus !== 'all' && filterStatus !== targetStatus) {
+        setFilterStatus('all');
+        toast.info('Status filter cleared to show moved task');
+      }
+      
+      // Clear date filter if the task doesn't match current date filter
+      if (dateFilterType !== 'all') {
+        const movedTask = tasks.find(t => t.id === active.id);
+        if (movedTask && !filteredTasks.includes(movedTask)) {
+          setDateFilterType('all');
+          toast.info('Date filter cleared to show moved task');
+        }
+      }
+      
+      toast.success(`Task moved to ${columns.find(c => c.id === targetStatus)?.title}`);
     }
     
     setActiveId(null);
